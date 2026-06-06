@@ -1,8 +1,19 @@
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { useSettings } from '@/context/SettingsContext';
 
 export function cn(...inputs) {
   return twMerge(clsx(inputs));
+}
+
+// Hook for settings-aware formatting
+export function useFormat() {
+  const { formatCurrency: settingsFormatCurrency, formatDate: settingsFormatDate } = useSettings();
+  
+  return {
+    formatCurrency: settingsFormatCurrency,
+    formatDate: settingsFormatDate,
+  };
 }
 
 // Format number as currency

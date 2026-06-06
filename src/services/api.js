@@ -1,10 +1,11 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+// Use environment variable or fallback to production backend
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://sales-api-hhyf.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 60000, // 60 seconds for cold starts
   headers: {
     'Content-Type': 'application/json',
   },

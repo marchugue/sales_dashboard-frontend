@@ -2,10 +2,10 @@ import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
 
 const variants = {
-  default: 'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800',
-  secondary: 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 hover:text-slate-900',
-  ghost: 'text-slate-600 hover:bg-slate-100 hover:text-slate-900',
-  danger: 'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800',
+  default: 'bg-primary text-primary-foreground hover:bg-primary-600 active:bg-primary-700',
+  secondary: 'bg-secondary text-secondary-foreground border border-border hover:bg-accent hover:text-accent-foreground',
+  ghost: 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
+  danger: 'bg-destructive text-destructive-foreground hover:bg-rose-700 active:bg-rose-800',
 };
 
 const sizes = {

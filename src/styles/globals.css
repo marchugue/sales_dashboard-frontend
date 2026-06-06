@@ -66,31 +66,31 @@
 
 @layer components {
   .dashboard-card {
-    @apply bg-white rounded-lg border border-slate-200 shadow-sm;
+    @apply bg-card rounded-lg border border-border shadow-sm;
   }
   
   .dashboard-card-header {
-    @apply px-6 py-4 border-b border-slate-100 flex items-center justify-between;
+    @apply px-6 py-4 border-b border-border flex items-center justify-between;
   }
   
   .dashboard-card-title {
-    @apply text-base font-semibold text-slate-900;
+    @apply text-base font-semibold text-card-foreground;
   }
   
   .dashboard-card-content {
-    @apply p-6;
+    @apply p-6 text-card-foreground;
   }
   
   .kpi-card {
-    @apply bg-white rounded-lg border border-slate-200 p-6 shadow-sm transition-shadow hover:shadow-md;
+    @apply bg-card rounded-lg border border-border p-6 shadow-sm transition-shadow hover:shadow-md;
   }
   
   .kpi-label {
-    @apply text-sm font-medium text-slate-500;
+    @apply text-sm font-medium text-muted-foreground;
   }
   
   .kpi-value {
-    @apply text-2xl font-bold text-slate-900 mt-1;
+    @apply text-2xl font-bold text-card-foreground mt-1;
   }
   
   .kpi-change {
@@ -182,7 +182,39 @@
   .text-balance {
     text-wrap: balance;
   }
-  
+
+  /* Density utilities */
+  .density-compact {
+    --space-unit: 0.5rem;
+  }
+  .density-comfortable {
+    --space-unit: 1rem;
+  }
+  .density-spacious {
+    --space-unit: 1.5rem;
+  }
+
+  /* Dashboard card spacing based on density */
+  .density-compact .dashboard-card {
+    @apply p-3;
+  }
+  .density-compact .dashboard-card-header {
+    @apply mb-2 pb-2;
+  }
+  .density-compact .dashboard-card-content {
+    @apply space-y-2;
+  }
+
+  .density-spacious .dashboard-card {
+    @apply p-8;
+  }
+  .density-spacious .dashboard-card-header {
+    @apply mb-6 pb-4;
+  }
+  .density-spacious .dashboard-card-content {
+    @apply space-y-6;
+  }
+
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: rgb(203 213 225) transparent;

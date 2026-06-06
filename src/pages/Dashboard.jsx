@@ -1,9 +1,8 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { KPICardsGrid } from '@/components/dashboard/KPICard';
 import { SalesTrendChart } from '@/components/dashboard/SalesTrendChart';
 import { CategoryChart } from '@/components/dashboard/CategoryChart';
 import { RegionChart } from '@/components/dashboard/RegionChart';
-import { DataTable } from '@/components/dashboard/DataTable';
 import { FilterPanel, ActiveFilters } from '@/components/dashboard/FilterPanel';
 import { InsightsPanel, TopProductsPanel } from '@/components/dashboard/InsightsPanel';
 import {
@@ -12,15 +11,14 @@ import {
   useCategoryBreakdown,
   useRegionAnalysis,
   useTopProducts,
-  useRawData,
   useInsights,
   useFilterOptions,
   useFilters,
-  usePagination,
-  useDebounce,
 } from '@/hooks/useDashboard';
+import { useHeader } from '@/components/layout/Layout';
 import { dashboardAPI } from '@/services/api';
-import { subDays, format } from 'date-fns';
+import { subDays, format, differenceInDays } from 'date-fns';
+import { generateInsights } from '@/lib/aiInsights';
 
 // Default date range: last 30 days
 const defaultDateRange = {
@@ -31,44 +29,35 @@ const defaultDateRange = {
 export function Dashboard() {
   const [period, setPeriod] = useState('daily');
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const debouncedSearch = useDebounce(searchQuery, 500);
+  const { updateHeader } = useHeader();
 
   // Filters
   const { filters, updateFilter, clearFilters, removeFilter, setFilters } = useFilters({
     ...defaultDateRange,
   });
 
-  // Pagination
-  const {
-    page,
-    limit,
-    setPage,
-    setLimit,
-    setTotal,
-    hasNextPage,
-    hasPrevPage,
-    totalPages,
-  } = usePagination(1, 10);
+  // Memoize filter objects to prevent infinite re-renders
+  const memoizedFilters = useMemo(() => filters, [JSON.stringify(filters)]);
 
   // Data fetching
-  const { data: kpiData, loading: kpiLoading } = useKPISummary(filters);
-  const { data: trendData, loading: trendLoading } = useSalesTrend(period, filters);
-  const { data: categoryData, loading: categoryLoading } = useCategoryBreakdown(filters);
-  const { data: regionData, loading: regionLoading } = useRegionAnalysis(filters);
-  const { data: topProductsData, loading: topProductsLoading } = useTopProducts(10, filters);
-  const { data: insightsData, loading: insightsLoading } = useInsights(filters);
+  const { data: kpiData, loading: kpiLoading } = useKPISummary(memoizedFilters);
+  const { data: trendData, loading: trendLoading } = useSalesTrend(period, memoizedFilters);
+  const { data: categoryData, loading: categoryLoading } = useCategoryBreakdown(memoizedFilters);
+  const { data: regionData, loading: regionLoading } = useRegionAnalysis(memoizedFilters);
+  const { data: topProductsData, loading: topProductsLoading } = useTopProducts(10, memoizedFilters);
+  // Generate AI insights from actual data
+  const insightsData = useMemo(() => {
+    if (!kpiData) return null;
+    return generateInsights({
+      kpi: kpiData,
+      trend: trendData,
+      category: categoryData,
+      region: regionData,
+      topProducts: topProductsData,
+    }, period);
+  }, [kpiData, trendData, categoryData, regionData, topProductsData, period]);
+  const insightsLoading = kpiLoading;
   const { data: filterOptions, loading: filterOptionsLoading } = useFilterOptions();
-  
-  const { data: rawDataResponse, loading: rawDataLoading, refetch: refetchRawData } = useRawData(
-    { ...filters, search: debouncedSearch },
-    { page, limit }
-  );
-
-  // Update total when raw data changes
-  if (rawDataResponse?.pagination?.total && rawDataResponse.pagination.total !== totalPages * limit / limit * limit) {
-    setTotal(rawDataResponse.pagination.total);
-  }
 
   // Handlers
   const handleExport = useCallback(async () => {
@@ -79,51 +68,57 @@ export function Dashboard() {
     }
   }, [filters]);
 
-  const handlePageChange = useCallback((newPage) => {
-    setPage(newPage);
-  }, [setPage]);
-
-  const handleLimitChange = useCallback((newLimit) => {
-    setLimit(newLimit);
-    setPage(1);
-  }, [setLimit, setPage]);
-
   const handleFilterChange = useCallback((newFilters) => {
     setFilters(newFilters);
-    setPage(1);
-  }, [setFilters, setPage]);
+  }, [setFilters]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length - 2; // Exclude default dates
 
+  // Stable callback for date range changes
+  const handleDateRangeChange = useCallback((range) => {
+    setFilters(prev => ({ ...prev, startDate: range.startDate, endDate: range.endDate }));
+  }, [setFilters]);
+
+  // Update header state for TopBar
+  useEffect(() => {
+    updateHeader({
+      dateRange: { startDate: filters.startDate, endDate: filters.endDate },
+      onDateRangeChange: handleDateRangeChange,
+      onFilterClick: () => setFilterPanelOpen(true),
+      filterCount: activeFilterCount > 0 ? activeFilterCount : 0,
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.startDate, filters.endDate, activeFilterCount, updateHeader, handleDateRangeChange]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-slate-500 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
             Overview of your sales performance and key metrics
           </p>
         </div>
         
         {/* Period selector */}
-        <div className="flex items-center gap-2 bg-white rounded-lg border border-slate-200 p-1">
+        <div className="flex items-center gap-2 bg-card rounded-lg border border-border p-1 w-fit">
           <button
             onClick={() => setPeriod('daily')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               period === 'daily'
-                ? 'bg-primary-50 text-primary-700'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent'
             }`}
           >
             Daily
           </button>
           <button
             onClick={() => setPeriod('monthly')}
-            className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+            className={`px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-medium rounded-md transition-colors ${
               period === 'monthly'
-                ? 'bg-primary-50 text-primary-700'
-                : 'text-slate-600 hover:bg-slate-100'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-accent'
             }`}
           >
             Monthly
@@ -139,10 +134,10 @@ export function Dashboard() {
       />
 
       {/* KPI Cards */}
-      <KPICardsGrid data={kpiData} loading={kpiLoading} />
+      <KPICardsGrid data={kpiData} loading={kpiLoading} filters={filters} />
 
       {/* Charts row 1 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <div className="lg:col-span-2">
           <SalesTrendChart data={trendData} loading={trendLoading} period={period} />
         </div>
@@ -151,32 +146,21 @@ export function Dashboard() {
         </div>
       </div>
 
-      {/* Charts row 2 */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <CategoryChart data={categoryData} loading={categoryLoading} />
-        </div>
-        <div className="space-y-6">
-          <TopProductsPanel data={topProductsData} loading={topProductsLoading} />
-          <InsightsPanel data={insightsData} loading={insightsLoading} />
-        </div>
+      {/* Charts row 2 - Category & Top Products side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+        <CategoryChart data={categoryData} loading={categoryLoading} />
+        <TopProductsPanel data={topProductsData} loading={topProductsLoading} />
       </div>
 
-      {/* Data Table */}
-      <DataTable
-        data={rawDataResponse?.data || []}
-        loading={rawDataLoading}
-        pagination={{
-          page,
-          limit,
-          total: rawDataResponse?.pagination?.total || 0,
-          totalPages: Math.ceil((rawDataResponse?.pagination?.total || 0) / limit),
-          hasNextPage: page < Math.ceil((rawDataResponse?.pagination?.total || 0) / limit),
-          hasPrevPage: page > 1,
-        }}
-        onPageChange={handlePageChange}
-        onLimitChange={handleLimitChange}
-      />
+      {/* AI Insights - Full width at bottom */}
+      <div className="w-full">
+        <InsightsPanel 
+          data={insightsData} 
+          loading={insightsLoading} 
+          title="AI-Powered Insights"
+          subtitle={`Analysis based on ${filters.startDate ? format(new Date(filters.startDate), 'MMM d') : ''} - ${filters.endDate ? format(new Date(filters.endDate), 'MMM d, yyyy') : ''}`}
+        />
+      </div>
 
       {/* Filter Panel */}
       <FilterPanel

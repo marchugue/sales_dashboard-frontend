@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { dashboardAPI } from '@/services/api';
 
 // Generic hook for API calls with loading and error states
@@ -6,12 +6,16 @@ const useAPICall = (apiFunction, initialParams = {}) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Use ref to avoid dependency issues with apiFunction
+  const apiFunctionRef = useRef(apiFunction);
+  apiFunctionRef.current = apiFunction;
 
   const fetchData = useCallback(async (params = initialParams) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await apiFunction(params);
+      const response = await apiFunctionRef.current(params);
       setData(response.data);
     } catch (err) {
       setError(err.message || 'Failed to fetch data');
@@ -19,11 +23,46 @@ const useAPICall = (apiFunction, initialParams = {}) => {
     } finally {
       setLoading(false);
     }
-  }, [apiFunction]);
+  }, []); // No dependencies - uses ref
 
+  // Only refetch when params actually change
+  const paramsKey = JSON.stringify(initialParams);
   useEffect(() => {
     fetchData(initialParams);
-  }, [fetchData, JSON.stringify(initialParams)]);
+  }, [fetchData, paramsKey]);
+
+  return { data, loading, error, refetch: fetchData };
+};
+
+// Generic hook for API calls with period parameter (for Sales Trend)
+const useAPICallWithPeriod = (apiFunction, initialParams = {}, period) => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
+  // Use ref to avoid dependency issues with apiFunction
+  const apiFunctionRef = useRef(apiFunction);
+  apiFunctionRef.current = apiFunction;
+
+  const fetchData = useCallback(async (params = initialParams) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await apiFunctionRef.current(params, period);
+      setData(response.data);
+    } catch (err) {
+      setError(err.message || 'Failed to fetch data');
+      console.error('API Error:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []); // No dependencies - uses ref
+
+  // Include period in the dependency key
+  const paramsKey = JSON.stringify({ params: initialParams, period });
+  useEffect(() => {
+    fetchData(initialParams);
+  }, [fetchData, paramsKey, period]);
 
   return { data, loading, error, refetch: fetchData };
 };
@@ -35,9 +74,10 @@ export const useKPISummary = (filters) => {
 
 // Hook for Sales Trend
 export const useSalesTrend = (period, filters) => {
-  return useAPICall(
-    (params) => dashboardAPI.getSalesTrend(period, params),
-    filters
+  return useAPICallWithPeriod(
+    (params, p) => dashboardAPI.getSalesTrend(p, params),
+    filters,
+    period
   );
 };
 
@@ -64,12 +104,18 @@ export const useRawData = (filters, pagination) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Use refs to avoid dependency issues
+  const filtersRef = useRef(filters);
+  const paginationRef = useRef(pagination);
+  filtersRef.current = filters;
+  paginationRef.current = pagination;
 
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await dashboardAPI.getRawData(filters, pagination);
+      const response = await dashboardAPI.getRawData(filtersRef.current, paginationRef.current);
       setData(response);
     } catch (err) {
       setError(err.message || 'Failed to fetch data');
@@ -77,11 +123,13 @@ export const useRawData = (filters, pagination) => {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination]);
+  }, []); // No dependencies - uses refs
 
+  // Only refetch when params actually change (using JSON for deep comparison)
+  const paramsKey = JSON.stringify({ filters, pagination });
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, [fetchData, paramsKey]);
 
   return { data, loading, error, refetch: fetchData };
 };

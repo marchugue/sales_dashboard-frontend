@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   AreaChart,
   Area,
@@ -8,9 +9,9 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { SkeletonChart } from '@/components/ui/Skeleton';
-import { formatCurrency } from '@/lib/utils';
+import { useSettings } from '@/context/SettingsContext';
 
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label, formatCurrency }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-lg">
@@ -30,7 +31,9 @@ const CustomTooltip = ({ active, payload, label }) => {
   return null;
 };
 
-export function SalesTrendChart({ data, loading, period = 'daily' }) {
+function SalesTrendChartComponent({ data, loading, period = 'daily' }) {
+  const { formatCurrency, language, currencyConfig } = useSettings();
+
   if (loading) {
     return <SkeletonChart />;
   }
@@ -41,7 +44,7 @@ export function SalesTrendChart({ data, loading, period = 'daily' }) {
         <div className="dashboard-card-header">
           <h3 className="dashboard-card-title">Sales Trend</h3>
         </div>
-        <div className="dashboard-card-content h-80 flex items-center justify-center">
+        <div className="dashboard-card-content h-64 sm:h-80 flex items-center justify-center">
           <p className="text-slate-500">No data available</p>
         </div>
       </div>
@@ -59,8 +62,8 @@ export function SalesTrendChart({ data, loading, period = 'daily' }) {
         </div>
       </div>
       <div className="dashboard-card-content">
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-64 sm:h-80 w-full" style={{ minHeight: '256px' }}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={280} minHeight={256}>
             <AreaChart
               data={data}
               margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
@@ -91,10 +94,14 @@ export function SalesTrendChart({ data, loading, period = 'daily' }) {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: '#64748b', fontSize: 12 }}
-                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => {
+                  const config = currencyConfig[language.currency] || currencyConfig.usd;
+                  const converted = value * config.rate;
+                  return `${config.symbol}${(converted / 1000).toFixed(0)}k`;
+                }}
                 dx={-10}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip formatCurrency={formatCurrency} />} />
               <Area
                 type="monotone"
                 dataKey="sales"
@@ -120,3 +127,12 @@ export function SalesTrendChart({ data, loading, period = 'daily' }) {
     </div>
   );
 }
+
+export const SalesTrendChart = memo(SalesTrendChartComponent, (prevProps, nextProps) => {
+  // Only re-render if data actually changed
+  return (
+    prevProps.loading === nextProps.loading &&
+    prevProps.period === nextProps.period &&
+    JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data)
+  );
+});

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   BarChart,
   Bar,
@@ -9,11 +10,11 @@ import {
   Cell,
 } from 'recharts';
 import { SkeletonChart } from '@/components/ui/Skeleton';
-import { formatCurrency } from '@/lib/utils';
+import { useSettings } from '@/context/SettingsContext';
 
 const COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'];
 
-const CustomTooltip = ({ active, payload }) => {
+const CustomTooltip = ({ active, payload, formatCurrency }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -34,7 +35,9 @@ const CustomTooltip = ({ active, payload }) => {
   return null;
 };
 
-export function CategoryChart({ data, loading }) {
+function CategoryChartComponent({ data, loading }) {
+  const { formatCurrency, language, currencyConfig } = useSettings();
+
   if (loading) {
     return <SkeletonChart />;
   }
@@ -45,7 +48,7 @@ export function CategoryChart({ data, loading }) {
         <div className="dashboard-card-header">
           <h3 className="dashboard-card-title">Sales by Category</h3>
         </div>
-        <div className="dashboard-card-content h-80 flex items-center justify-center">
+        <div className="dashboard-card-content h-64 sm:h-80 flex items-center justify-center">
           <p className="text-slate-500">No data available</p>
         </div>
       </div>
@@ -66,8 +69,8 @@ export function CategoryChart({ data, loading }) {
         </div>
       </div>
       <div className="dashboard-card-content">
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
+        <div className="h-64 sm:h-80" style={{ minHeight: '256px' }}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={256}>
             <BarChart
               data={sortedData}
               margin={{ top: 10, right: 10, left: 0, bottom: 20 }}
@@ -83,7 +86,11 @@ export function CategoryChart({ data, loading }) {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: '#64748b', fontSize: 12 }}
-                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                tickFormatter={(value) => {
+                  const config = currencyConfig[language.currency] || currencyConfig.usd;
+                  const converted = value * config.rate;
+                  return `${config.symbol}${(converted / 1000).toFixed(0)}k`;
+                }}
               />
               <YAxis
                 type="category"
@@ -93,7 +100,7 @@ export function CategoryChart({ data, loading }) {
                 tick={{ fill: '#64748b', fontSize: 12 }}
                 width={100}
               />
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip formatCurrency={formatCurrency} />} />
               <Bar
                 dataKey="sales"
                 radius={[0, 4, 4, 0]}
@@ -113,3 +120,10 @@ export function CategoryChart({ data, loading }) {
     </div>
   );
 }
+
+export const CategoryChart = memo(CategoryChartComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.loading === nextProps.loading &&
+    JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data)
+  );
+});

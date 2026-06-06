@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import {
   PieChart,
   Pie,
@@ -7,7 +8,8 @@ import {
   Legend,
 } from 'recharts';
 import { SkeletonChart } from '@/components/ui/Skeleton';
-import { formatCurrency, formatNumber } from '@/lib/utils';
+import { formatNumber } from '@/lib/utils';
+import { useSettings } from '@/context/SettingsContext';
 
 const COLORS = [
   '#2563eb',
@@ -19,7 +21,7 @@ const COLORS = [
   '#1e40af',
 ];
 
-const CustomTooltip = ({ active, payload }) => {
+const CustomTooltip = ({ active, payload, formatCurrency }) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -44,21 +46,23 @@ const CustomTooltip = ({ active, payload }) => {
 
 const CustomLegend = ({ payload }) => {
   return (
-    <ul className="flex flex-wrap justify-center gap-4 mt-4">
-      {payload.map((entry, index) => (
-        <li key={`legend-${index}`} className="flex items-center gap-2">
+    <ul className="flex flex-wrap justify-center gap-x-4 gap-y-2 px-2">
+      {payload.slice(0, 6).map((entry, index) => (
+        <li key={`legend-${index}`} className="flex items-center gap-1.5">
           <span
-            className="w-3 h-3 rounded-full"
+            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
             style={{ backgroundColor: entry.color }}
           />
-          <span className="text-sm text-slate-600">{entry.value}</span>
+          <span className="text-xs text-slate-600 truncate max-w-[80px]">{entry.value}</span>
         </li>
       ))}
     </ul>
   );
 };
 
-export function RegionChart({ data, loading }) {
+function RegionChartComponent({ data, loading }) {
+  const { formatCurrency } = useSettings();
+
   if (loading) {
     return <SkeletonChart />;
   }
@@ -69,7 +73,7 @@ export function RegionChart({ data, loading }) {
         <div className="dashboard-card-header">
           <h3 className="dashboard-card-title">Sales by Region</h3>
         </div>
-        <div className="dashboard-card-content h-80 flex items-center justify-center">
+        <div className="dashboard-card-content h-64 sm:h-80 flex items-center justify-center">
           <p className="text-slate-500">No data available</p>
         </div>
       </div>
@@ -94,18 +98,19 @@ export function RegionChart({ data, loading }) {
         </div>
       </div>
       <div className="dashboard-card-content">
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
+        <div className="h-64 sm:h-80 w-full" style={{ minHeight: '256px' }}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={250} minHeight={256}>
+            <PieChart margin={{ top: 10, right: 10, bottom: 10, left: 10 }}>
               <Pie
                 data={chartData}
                 cx="50%"
-                cy="45%"
-                innerRadius={60}
-                outerRadius={100}
+                cy="40%"
+                innerRadius={50}
+                outerRadius={85}
                 paddingAngle={2}
                 dataKey="sales"
                 nameKey="region"
+                labelLine={false}
               >
                 {chartData.map((entry, index) => (
                   <Cell
@@ -116,11 +121,12 @@ export function RegionChart({ data, loading }) {
                   />
                 ))}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<CustomTooltip formatCurrency={formatCurrency} />} />
               <Legend
                 content={<CustomLegend />}
                 verticalAlign="bottom"
-                height={36}
+                align="center"
+                layout="horizontal"
               />
             </PieChart>
           </ResponsiveContainer>
@@ -129,3 +135,10 @@ export function RegionChart({ data, loading }) {
     </div>
   );
 }
+
+export const RegionChart = memo(RegionChartComponent, (prevProps, nextProps) => {
+  return (
+    prevProps.loading === nextProps.loading &&
+    JSON.stringify(prevProps.data) === JSON.stringify(nextProps.data)
+  );
+});

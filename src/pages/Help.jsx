@@ -50,22 +50,22 @@ const resources = [
 
 function FAQItem({ faq, isOpen, onClick }) {
   return (
-    <div className="border border-slate-200 rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-hidden bg-card">
       <button
         onClick={onClick}
-        className="flex items-center justify-between w-full p-4 text-left hover:bg-slate-50 transition-colors"
+        className="flex items-center justify-between w-full p-4 text-left hover:bg-accent transition-colors"
       >
-        <span className="font-medium text-slate-900">{faq.question}</span>
+        <span className="font-medium text-card-foreground">{faq.question}</span>
         <ChevronDown
           className={cn(
-            'w-5 h-5 text-slate-500 transition-transform',
+            'w-5 h-5 text-muted-foreground transition-transform',
             isOpen && 'rotate-180'
           )}
         />
       </button>
       {isOpen && (
         <div className="px-4 pb-4">
-          <p className="text-sm text-slate-600 leading-relaxed">{faq.answer}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">{faq.answer}</p>
         </div>
       )}
     </div>
@@ -84,23 +84,15 @@ export function Help() {
 
   return (
     <div className="space-y-6">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Help & Support</h1>
-        <p className="text-slate-500 mt-1">
-          Find answers and get support for the dashboard
-        </p>
-      </div>
-
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
           type="search"
           placeholder="Search for help..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-12 py-6 text-lg"
+          className="pl-12 py-6 text-lg bg-card border-border"
         />
       </div>
 
@@ -110,27 +102,27 @@ export function Help() {
           <a
             key={resource.title}
             href={resource.href}
-            className="flex items-start gap-4 p-4 bg-white rounded-lg border border-slate-200 hover:border-primary-300 hover:shadow-sm transition-all"
+            className="flex items-start gap-4 p-4 bg-card rounded-lg border border-border hover:border-primary hover:shadow-sm transition-all"
           >
-            <div className="w-10 h-10 rounded-lg bg-primary-50 flex items-center justify-center flex-shrink-0">
-              <resource.icon className="w-5 h-5 text-primary-600" />
+            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <resource.icon className="w-5 h-5 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1">
-                <h3 className="font-medium text-slate-900">{resource.title}</h3>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                <h3 className="font-medium text-card-foreground">{resource.title}</h3>
+                <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
               </div>
-              <p className="text-sm text-slate-500 mt-0.5">{resource.description}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{resource.description}</p>
             </div>
           </a>
         ))}
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-white rounded-lg border border-slate-200 p-6">
+      <div className="bg-card rounded-lg border border-border p-6">
         <div className="flex items-center gap-2 mb-6">
-          <HelpCircle className="w-5 h-5 text-primary-600" />
-          <h2 className="text-lg font-semibold text-slate-900">Frequently Asked Questions</h2>
+          <HelpCircle className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-semibold text-card-foreground">Frequently Asked Questions</h2>
         </div>
 
         <div className="space-y-3">
@@ -145,9 +137,9 @@ export function Help() {
             ))
           ) : (
             <div className="text-center py-8">
-              <HelpCircle className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500">No results found for &quot;{searchQuery}&quot;</p>
-              <p className="text-sm text-slate-400 mt-1">
+              <HelpCircle className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">No results found for &quot;{searchQuery}&quot;</p>
+              <p className="text-sm text-muted-foreground mt-1">
                 Try a different search term or contact support
               </p>
             </div>
@@ -156,11 +148,11 @@ export function Help() {
       </div>
 
       {/* Contact card */}
-      <div className="bg-primary-50 rounded-lg border border-primary-100 p-6">
+      <div className="bg-primary/10 rounded-lg border border-primary/20 p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h3 className="font-semibold text-primary-900">Still need help?</h3>
-            <p className="text-sm text-primary-700 mt-1">
+            <h3 className="font-semibold text-primary">Still need help?</h3>
+            <p className="text-sm text-primary/80 mt-1">
               Our support team is available to assist you with any questions
             </p>
           </div>
